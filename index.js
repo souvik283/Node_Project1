@@ -1,13 +1,32 @@
 const express = require("express")
 const fs = require("fs")
-const users = require("./MOCK_DATA.json")
+const mongoose = require("mongoose")
+const users = require("./MOCK_DATA.json");
+const { send, nextTick } = require("process");
 
 const app = express();
 let port = 4000;
 
 app.use(express.urlencoded({extended :false}))
 
+app.use((req, res, next)=>{
+    console.log("middleware 1")
+    req.name ="souvik"
+    next()
+})
+app.use((req, res, next)=>{
+    console.log("middleware 2", req.name)
+    next()
+})
+
+app.use((req, res, next)=>{
+    // res.json({msg: "hello"})
+    next()  
+})
+
 app.get("/api/users", (req, res) => {
+    res.header("X-last-name", "Ghosh")
+    console.log(req.headers)
     return res.json(users);
 })
 
@@ -32,7 +51,10 @@ app.get("/users/:id", (req, res) => {
 app.route("/api/users/:id")
     .get((req, res) => {
         let id1 = Number(req.params.id)
-        // console.log(id1)
+        // console.log(users.length)
+        if (id1 > users.length) {
+            return res.status(404).json({ msg: "page not found"})
+        }
         const user1 = users.find((user) => user.id === id1)
 
         return res.json(user1)
@@ -44,9 +66,12 @@ app.route("/api/users/:id")
 
 app.post("/api/users", (req, res) => {
     const body = req.body
+    if(!body || !body.first_name|| !body.email){
+        return res.status(400).json({ msg: "inavlid data"})
+    }
     users.push({ ...body, id: users.length + 1 })
     fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err, data) => {
-        return res.json({ staus: "successful", id: users.length })
+        return res.status(201).json({ staus: "successful", id: users.length, name: req.body.first_name})
     })
 })
 
